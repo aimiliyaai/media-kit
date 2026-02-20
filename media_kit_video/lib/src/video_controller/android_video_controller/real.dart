@@ -68,10 +68,11 @@ class AndroidVideoController extends PlatformVideoController {
           if (configuration.vo == 'mediacodec_embed') 'vid': vidValue,
         },
       );
-      // Instead of seeking to the start (Duration.zero), seek to the current playback position
-      // without jumping the user to the start of the media.
-      final currentPosition = player.state.position;
-      await player.seek(currentPosition);
+      // Removed: The original code called player.seek(Duration.zero) here, which was later
+      // changed to player.seek(currentPosition). However, for DASH (separate audio/video streams),
+      // decoder recreation after seek+play emits fresh videoParams → widListener → seek again,
+      // causing an infinite loop that resets position to 0 (since player.state.position is already
+      // reset by the time this runs). The surface reconfiguration above is sufficient; no seek needed.
     });
   }
 
