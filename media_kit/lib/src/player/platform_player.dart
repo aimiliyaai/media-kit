@@ -514,6 +514,15 @@ class PlayerConfiguration {
   /// Learn more: https://ffmpeg.org/ffmpeg-protocols.html#Protocol-Options
   final List<String> protocolWhitelist;
 
+  /// Additional mpv options to set before `mpv_initialize`.
+  ///
+  /// These are passed as key-value pairs and applied before the mpv context
+  /// is initialized, allowing configuration of options that can only be set
+  /// at init time (e.g. `ao`, `video-sync`, `volume-max`).
+  ///
+  /// Default: `null`.
+  final Map<String, String>? options;
+
   /// {@macro player_configuration}
   const PlayerConfiguration({
     this.vo = 'null',
@@ -539,6 +548,7 @@ class PlayerConfiguration {
       'https',
       'crypto',
     ],
+    this.options,
   });
 }
 

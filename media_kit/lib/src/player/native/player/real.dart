@@ -1278,6 +1278,74 @@ class NativePlayer extends PlatformPlayer {
     return "";
   }
 
+  /// Sets HTTP headers for media requests.
+  ///
+  /// [userAgent] sets the `user-agent` mpv property.
+  /// [referer] sets the `referrer` mpv property.
+  /// [headers] sets additional HTTP header fields via `http-header-fields`.
+  ///
+  void setMediaHeader({
+    String? userAgent,
+    String? referer,
+    Map<String, String>? headers,
+  }) {
+    if (disposed) {
+      throw AssertionError('[Player] has been disposed');
+    }
+    if (userAgent != null) {
+      _setPropertyStringSync('user-agent', userAgent);
+    }
+    if (referer != null) {
+      _setPropertyStringSync('referrer', referer);
+    }
+    if (headers != null) {
+      final property = 'http-header-fields'.toNativeUtf8();
+      final value = calloc<generated.mpv_node>();
+      final valRef = value.ref
+        ..format = generated.mpv_format.MPV_FORMAT_NODE_ARRAY;
+      valRef.u.list = calloc<generated.mpv_node_list>();
+      final valList = valRef.u.list.ref
+        ..num = headers.length
+        ..values = calloc<generated.mpv_node>(headers.length);
+      int i = 0;
+      for (final e in headers.entries) {
+        valList.values[i++]
+          ..format = generated.mpv_format.MPV_FORMAT_STRING
+          ..u.string = '${e.key}: ${e.value}'.toNativeUtf8().cast();
+      }
+      mpv.mpv_set_property(
+        ctx,
+        property.cast(),
+        generated.mpv_format.MPV_FORMAT_NODE,
+        value.cast(),
+      );
+      // Free allocated memory.
+      calloc.free(property);
+      for (int j = 0; j < valList.num; j++) {
+        calloc.free(valList.values[j].u.string);
+      }
+      calloc.free(valList.values);
+      calloc.free(valRef.u.list);
+      calloc.free(value);
+    }
+  }
+
+  /// Synchronous helper: sets a string property via mpv_set_property (MPV_FORMAT_STRING).
+  void _setPropertyStringSync(String name, String value) {
+    final namePtr = name.toNativeUtf8();
+    final valuePtr = value.toNativeUtf8();
+    final ptr = calloc<Pointer<Void>>(1)..value = valuePtr.cast();
+    mpv.mpv_set_property(
+      ctx,
+      namePtr.cast(),
+      generated.mpv_format.MPV_FORMAT_STRING,
+      ptr.cast(),
+    );
+    calloc.free(namePtr);
+    calloc.free(ptr);
+    calloc.free(valuePtr);
+  }
+
   /// Observes property for the internal libmpv instance of this [Player].
   /// Please use this method only if you know what you are doing, existing methods in [Player] implementation are suited for the most use cases.
   ///
@@ -2323,6 +2391,8 @@ class NativePlayer extends PlatformPlayer {
         // Set --vid=no by default to prevent redundant video decoding.
         // [VideoController] internally sets --vid=auto upon attachment to enable video rendering & decoding.
         if (!test) 'vid': 'no',
+        // User-provided init-time options (e.g. ao, video-sync, volume-max).
+        ...?configuration.options,
       };
 
       if (Platform.isAndroid &&

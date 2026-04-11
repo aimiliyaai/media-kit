@@ -325,6 +325,59 @@ class Player {
     );
   }
 
+  /// Sets a property on the internal mpv instance.
+  ///
+  /// See:
+  /// * https://mpv.io/manual/master/#options
+  /// * https://mpv.io/manual/master/#properties
+  Future<void> setProperty(String property, String value) async {
+    if (platform is NativePlayer) {
+      return (platform as NativePlayer).setProperty(property, value);
+    }
+  }
+
+  /// Gets a property from the internal mpv instance.
+  ///
+  /// See:
+  /// * https://mpv.io/manual/master/#options
+  /// * https://mpv.io/manual/master/#properties
+  Future<String> getProperty(String property) async {
+    if (platform is NativePlayer) {
+      return (platform as NativePlayer).getProperty(property);
+    }
+    return '';
+  }
+
+  /// Sets HTTP headers for media requests (native backend only).
+  void setMediaHeader({
+    String? userAgent,
+    String? referer,
+    Map<String, String>? headers,
+  }) {
+    if (platform is NativePlayer) {
+      (platform as NativePlayer).setMediaHeader(
+        userAgent: userAgent,
+        referer: referer,
+        headers: headers,
+      );
+    }
+  }
+
+  /// Creates a [Player] instance asynchronously.
+  ///
+  /// This factory constructor provides compatibility with PiliPlus-style API.
+  /// The [Player] is returned after the internal platform player is ready.
+  static Future<Player> create({
+    PlayerConfiguration configuration = const PlayerConfiguration(),
+  }) async {
+    final player = Player(configuration: configuration);
+    // Wait for the native player initialization to complete.
+    if (player.platform is NativePlayer) {
+      await (player.platform as NativePlayer).waitForPlayerInitialization;
+    }
+    return player;
+  }
+
   /// Internal platform specific identifier for this [Player] instance.
   ///
   /// Since, [int] is a primitive type, it can be used to pass this [Player] instance to native code without directly depending upon this library.
