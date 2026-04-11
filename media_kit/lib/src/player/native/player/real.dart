@@ -178,18 +178,29 @@ class NativePlayer extends PlatformPlayer {
       // Enter paused state.
       await _setPropertyFlag('pause', true);
 
-      if (playlist.any((media) => media.uri.startsWith('fd://'))) {
-        // The fd:// scheme is used to reference content:// URIs on Android.
-        // The loadlist command does not support this by default, yielding "Refusing to load potentially unsafe URL from a playlist."
-        // So, we fallback to loading each file individually.
+      // Use per-file loadfile if any media has extras (e.g. audio-files for dual-stream DASH)
+      // or fd:// URIs (content:// on Android, not supported by loadlist).
+      final needsPerFileLoad = playlist.any((media) =>
+          media.uri.startsWith('fd://') ||
+          (media.extras != null && media.extras!.isNotEmpty));
+
+      if (needsPerFileLoad) {
         for (int i = 0; i < playlist.length; i++) {
-          await _command(
-            [
-              'loadfile',
-              _sanitizeUri(playlist[i].uri),
-              'append',
-            ],
-          );
+          final media = playlist[i];
+          final args = <String>[
+            'loadfile',
+            _sanitizeUri(media.uri),
+            'append',
+          ];
+          // Pass extras as mpv loadfile options (key=value,key=value format).
+          if (media.extras case final extras?) {
+            if (extras.isNotEmpty) {
+              args.add(extras.entries
+                  .map((e) => '${e.key}=${e.value}')
+                  .join(','));
+            }
+          }
+          await _command(args);
         }
       } else {
         final file = await TempFile.create();
@@ -474,7 +485,19 @@ class NativePlayer extends PlatformPlayer {
       }
       // ---------------------------------------------
 
-      await _command(['loadfile', _sanitizeUri(media.uri), 'append']);
+      final args = <String>[
+        'loadfile',
+        _sanitizeUri(media.uri),
+        'append',
+      ];
+      if (media.extras case final extras?) {
+        if (extras.isNotEmpty) {
+          args.add(extras.entries
+              .map((e) => '${e.key}=${e.value}')
+              .join(','));
+        }
+      }
+      await _command(args);
     }
 
     if (synchronized) {
