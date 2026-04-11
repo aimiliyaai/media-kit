@@ -36,6 +36,7 @@ import 'package:media_kit/src/player/native/utils/isolates.dart';
 import 'package:media_kit/src/player/native/utils/native_reference_holder.dart';
 import 'package:media_kit/src/player/native/utils/temp_file.dart';
 import 'package:media_kit/src/player/platform_player.dart';
+import 'package:media_kit/src/player/native/utils/loadfile_utils.dart';
 
 import 'package:media_kit/generated/libmpv/bindings.dart' as generated;
 
@@ -187,20 +188,7 @@ class NativePlayer extends PlatformPlayer {
       if (needsPerFileLoad) {
         for (int i = 0; i < playlist.length; i++) {
           final media = playlist[i];
-          final args = <String>[
-            'loadfile',
-            _sanitizeUri(media.uri),
-            'append',
-          ];
-          // Pass extras as mpv loadfile options (key=value,key=value format).
-          if (media.extras case final extras?) {
-            if (extras.isNotEmpty) {
-              args.add(extras.entries
-                  .map((e) => '${e.key}=${e.value}')
-                  .join(','));
-            }
-          }
-          await _command(args);
+          await _command(buildLoadfileArgs(_sanitizeUri(media.uri), media.extras, apiVersion: apiVersion));
         }
       } else {
         final file = await TempFile.create();
@@ -485,19 +473,7 @@ class NativePlayer extends PlatformPlayer {
       }
       // ---------------------------------------------
 
-      final args = <String>[
-        'loadfile',
-        _sanitizeUri(media.uri),
-        'append',
-      ];
-      if (media.extras case final extras?) {
-        if (extras.isNotEmpty) {
-          args.add(extras.entries
-              .map((e) => '${e.key}=${e.value}')
-              .join(','));
-        }
-      }
-      await _command(args);
+      await _command(buildLoadfileArgs(_sanitizeUri(media.uri), media.extras, apiVersion: apiVersion));
     }
 
     if (synchronized) {
@@ -2712,6 +2688,10 @@ class NativePlayer extends PlatformPlayer {
   }
 
   Future<void> _command(List<String> args) async {
+    // Debug: log loadfile commands with extras
+    if (args.isNotEmpty && args[0] == 'loadfile' && args.length > 3) {
+      print('[media_kit] loadfile with options: ${args.join(' | ')}');
+    }
     final pointers = args.map<Pointer<Utf8>>((e) => e.toNativeUtf8()).toList();
     final arr = calloc<Pointer<Utf8>>(128);
     for (int i = 0; i < args.length; i++) {
@@ -2754,6 +2734,11 @@ class NativePlayer extends PlatformPlayer {
 
   /// Generated libmpv C API bindings.
   final generated.MPV mpv;
+
+  /// mpv client API version: (major << 16) | minor.
+  /// Since API 0x20003 (mpv 0.38+), `loadfile` takes an extra `index` argument
+  /// between `flags` and `options`.
+  late final int apiVersion = mpv.mpv_client_api_version();
 
   /// [Pointer] to [generated.mpv_handle] of this instance.
   Pointer<generated.mpv_handle> ctx = nullptr;
