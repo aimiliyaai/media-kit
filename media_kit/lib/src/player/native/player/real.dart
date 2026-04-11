@@ -2512,6 +2512,14 @@ class NativePlayer extends PlatformPlayer {
         properties['ao'] = 'null';
       }
 
+      // Remove properties that the user has already set via options (before mpv_initialize),
+      // so post-init defaults don't override the user's explicit choices.
+      if (configuration.options != null) {
+        for (final key in configuration.options!.keys) {
+          properties.remove(key);
+        }
+      }
+
       await Future.wait(properties.entries
           .map((entry) => _setPropertyString(entry.key, entry.value)));
 

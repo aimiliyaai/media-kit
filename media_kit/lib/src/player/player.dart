@@ -327,23 +327,31 @@ class Player {
 
   /// Sets a property on the internal mpv instance.
   ///
+  /// Does not wait for [VideoController] initialization to avoid deadlocks
+  /// when called between [Player.create] and [VideoController] construction.
+  ///
   /// See:
   /// * https://mpv.io/manual/master/#options
   /// * https://mpv.io/manual/master/#properties
   Future<void> setProperty(String property, String value) async {
     if (platform is NativePlayer) {
-      return (platform as NativePlayer).setProperty(property, value);
+      return (platform as NativePlayer)
+          .setProperty(property, value, waitForInitialization: false);
     }
   }
 
   /// Gets a property from the internal mpv instance.
+  ///
+  /// Does not wait for [VideoController] initialization to avoid deadlocks
+  /// when called between [Player.create] and [VideoController] construction.
   ///
   /// See:
   /// * https://mpv.io/manual/master/#options
   /// * https://mpv.io/manual/master/#properties
   Future<String> getProperty(String property) async {
     if (platform is NativePlayer) {
-      return (platform as NativePlayer).getProperty(property);
+      return (platform as NativePlayer)
+          .getProperty(property, waitForInitialization: false);
     }
     return '';
   }
