@@ -45,9 +45,33 @@ class AndroidVideoController extends PlatformVideoController {
     }
   }
 
+  Future<Duration?> _tryParseMpvSeconds(String name) async {
+    try {
+      final raw = (await player.getProperty(name)).trim();
+      final sec = double.tryParse(raw);
+      if (sec == null || sec.isNaN || !sec.isFinite || sec <= 0) return null;
+      return Duration(milliseconds: (sec * 1000).round());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Largest plausible clock among [Player.state.position], mpv `time-pos`, and `audio-pts`.
+  Future<Duration> _maxClockReading(Duration seed) async {
+    var t = seed < Duration.zero ? Duration.zero : seed;
+    final tp = await _tryParseMpvSeconds('time-pos');
+    if (tp != null && tp > t) t = tp;
+    final ap = await _tryParseMpvSeconds('audio-pts');
+    if (ap != null && ap > t) t = ap;
+    return t;
+  }
+
   /// Listener for updating the --wid property.
   Future<void> widListener() {
     return lock.synchronized(() async {
+      // Sample clock before `vo=null`; after VO teardown split A/V can briefly report ~0–1s.
+      final anchor = await _maxClockReading(player.state.position);
+
       final width = rect.value?.width.toInt() ?? 1;
       final height = rect.value?.height.toInt() ?? 1;
       final androidSurfaceSizeValue = [width, height].join('x');
@@ -68,10 +92,9 @@ class AndroidVideoController extends PlatformVideoController {
           if (configuration.vo == 'mediacodec_embed') 'vid': vidValue,
         },
       );
-      // Instead of seeking to the start (Duration.zero), seek to the current playback position
-      // without jumping the user to the start of the media.
-      final currentPosition = player.state.position;
-      await player.seek(currentPosition);
+      final after = await _maxClockReading(player.state.position);
+      final seekTarget = after > anchor ? after : anchor;
+      await player.seek(seekTarget < Duration.zero ? Duration.zero : seekTarget);
     });
   }
 

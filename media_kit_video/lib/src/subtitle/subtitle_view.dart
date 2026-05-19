@@ -9,22 +9,10 @@ import 'package:flutter/material.dart';
 
 import 'package:media_kit_video/src/video_controller/video_controller.dart';
 
-/// {@template subtitle_view}
-///
-/// SubtitleView
-/// ------------
-///
-/// [SubtitleView] widget is used to display the subtitles on top of the [Video].
-///
-/// {@endtemplate}
 class SubtitleView extends StatefulWidget {
-  /// The [VideoController] reference to control this [SubtitleView] output.
   final VideoController controller;
-
-  /// The configuration to be used for the subtitles.
   final SubtitleViewConfiguration configuration;
 
-  /// {@macro subtitle_view}
   const SubtitleView({
     super.key,
     required this.controller,
@@ -40,12 +28,9 @@ class SubtitleViewState extends State<SubtitleView> {
   late EdgeInsets padding = widget.configuration.padding;
   late Duration duration = const Duration(milliseconds: 100);
 
-  // The [StreamSubscription] to listen to the subtitle changes.
   StreamSubscription<List<String>>? subscription;
 
-  // The reference width for calculating the visible text scale factor.
   static const kTextScaleFactorReferenceWidth = 1920.0;
-  // The reference height for calculating the visible text scale factor.
   static const kTextScaleFactorReferenceHeight = 1080.0;
 
   @override
@@ -64,9 +49,6 @@ class SubtitleViewState extends State<SubtitleView> {
     super.dispose();
   }
 
-  /// Sets the padding to be used for the subtitles.
-  ///
-  /// The [duration] argument may be specified to set the duration of the animation.
   void setPadding(
     EdgeInsets padding, {
     Duration duration = const Duration(milliseconds: 100),
@@ -81,35 +63,65 @@ class SubtitleViewState extends State<SubtitleView> {
     });
   }
 
-  /// {@macro subtitle_view}
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate the visible text scale factor.
-
         final nr = (constraints.maxWidth * constraints.maxHeight);
         const dr =
             kTextScaleFactorReferenceWidth * kTextScaleFactorReferenceHeight;
-        final textScaleFactor = sqrt((nr / dr).clamp(0.0, 1.0));
-
+        final computedScale = sqrt((nr / dr).clamp(0.0, 1.0));
+        final scale =
+            widget.configuration.textScaleFactor ?? computedScale;
         final textScaler = widget.configuration.textScaler ??
-            TextScaler.linear(textScaleFactor);
+            TextScaler.linear(scale);
+
+        final text = [
+          for (final line in subtitle)
+            if (line.trim().isNotEmpty) line.trim(),
+        ].join('\n');
+
+        Widget textWidget = Text(
+          text,
+          style: widget.configuration.resolveStyle,
+          textAlign: widget.configuration.textAlign,
+          textScaler: textScaler,
+        );
+
+        final stroke = widget.configuration.resolveStrokeStyle;
+        if (stroke != null) {
+          textWidget = Stack(
+            children: [
+              Text(
+                text,
+                style: stroke,
+                textAlign: widget.configuration.textAlign,
+                textScaler: textScaler,
+              ),
+              textWidget,
+            ],
+          );
+        }
+
+        final bg = widget.configuration.backgroundColor;
+        if (bg != null) {
+          textWidget = Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: textWidget,
+          );
+        }
+
         return Material(
           color: Colors.transparent,
           child: AnimatedContainer(
             padding: padding,
             duration: duration,
             alignment: Alignment.bottomCenter,
-            child: Text(
-              [
-                for (final line in subtitle)
-                  if (line.trim().isNotEmpty) line.trim(),
-              ].join('\n'),
-              style: widget.configuration.style,
-              textAlign: widget.configuration.textAlign,
-              textScaler: textScaler,
-            ),
+            child: textWidget,
           ),
         );
       },
@@ -117,42 +129,34 @@ class SubtitleViewState extends State<SubtitleView> {
   }
 }
 
-/// {@template subtitle_view_configuration}
-/// SubtitleViewConfiguration
-/// -------------------------
-///
-/// Configurable options for customizing the [SubtitleView] behaviour.
-/// {@endtemplate}
 class SubtitleViewConfiguration {
-  /// Whether the subtitles should be visible or not.
   final bool visible;
-
-  /// The text style to be used for the subtitles.
-  final TextStyle style;
-
-  /// The text alignment to be used for the subtitles.
+  final double fontSize;
+  final Color fontColor;
+  final Color? backgroundColor;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final bool shadow;
+  final FontWeight fontWeight;
+  final double height;
   final TextAlign textAlign;
-
-  /// The text scaler to be used for the subtitles.
   final TextScaler? textScaler;
-
-  /// The padding to be used for the subtitles.
+  final double? textScaleFactor;
   final EdgeInsets padding;
 
-  /// {@macro subtitle_view_configuration}
   const SubtitleViewConfiguration({
     this.visible = true,
-    this.style = const TextStyle(
-      height: 1.4,
-      fontSize: 32.0,
-      letterSpacing: 0.0,
-      wordSpacing: 0.0,
-      color: Color(0xffffffff),
-      fontWeight: FontWeight.normal,
-      backgroundColor: Color(0xaa000000),
-    ),
+    this.fontSize = 32.0,
+    this.fontColor = const Color(0xffffffff),
+    this.backgroundColor = const Color(0xaa000000),
+    this.strokeColor,
+    this.strokeWidth = 0.0,
+    this.shadow = false,
+    this.fontWeight = FontWeight.normal,
+    this.height = 1.4,
     this.textAlign = TextAlign.center,
     this.textScaler,
+    this.textScaleFactor,
     this.padding = const EdgeInsets.fromLTRB(
       16.0,
       0.0,
@@ -160,4 +164,61 @@ class SubtitleViewConfiguration {
       24.0,
     ),
   });
+
+  TextStyle get resolveStyle => TextStyle(
+    fontSize: fontSize,
+    color: fontColor,
+    fontWeight: fontWeight,
+    height: height,
+    letterSpacing: 0.0,
+    wordSpacing: 0.0,
+    shadows: shadow ? const [Shadow(color: Colors.black, offset: Offset(1, 2), blurRadius: 3)] : null,
+  );
+
+  TextStyle? get resolveStrokeStyle {
+    if (strokeColor == null || strokeWidth <= 0) return null;
+    return TextStyle(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      height: height,
+      foreground: Paint()
+        ..color = strokeColor!
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SubtitleViewConfiguration &&
+          other.visible == visible &&
+          other.fontSize == fontSize &&
+          other.fontColor == fontColor &&
+          other.backgroundColor == backgroundColor &&
+          other.strokeColor == strokeColor &&
+          other.strokeWidth == strokeWidth &&
+          other.shadow == shadow &&
+          other.fontWeight == fontWeight &&
+          other.height == height &&
+          other.textAlign == textAlign &&
+          other.textScaler == textScaler &&
+          other.textScaleFactor == textScaleFactor &&
+          other.padding == padding;
+
+  @override
+  int get hashCode =>
+      visible.hashCode ^
+      fontSize.hashCode ^
+      fontColor.hashCode ^
+      backgroundColor.hashCode ^
+      strokeColor.hashCode ^
+      strokeWidth.hashCode ^
+      shadow.hashCode ^
+      fontWeight.hashCode ^
+      height.hashCode ^
+      textAlign.hashCode ^
+      textScaler.hashCode ^
+      textScaleFactor.hashCode ^
+      padding.hashCode;
 }

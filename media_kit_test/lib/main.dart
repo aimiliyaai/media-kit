@@ -246,6 +246,13 @@ class PrimaryScreen extends StatelessWidget {
               );
             },
           ),
+          SubtitleSettingsListTile(
+            current: const SubtitleViewConfiguration(),
+            onChanged: (config) {
+              // 保存配置到全局变量或持久化存储
+              // 在播放器创建时传入 subtitleViewConfiguration
+            },
+          ),
         ],
       ),
     );

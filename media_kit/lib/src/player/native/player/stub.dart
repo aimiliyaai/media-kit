@@ -15,4 +15,24 @@ class NativePlayer extends PlatformPlayer {
   /// Whether the [NativePlayer] is initialized for unit-testing.
   @visibleForTesting
   static bool test = false;
+
+  /// Web / wasm-js 条件导出会选用本 [stub]；[Player.setProperty] 等仍按 [NativePlayer] 解析，
+  /// 此处提供空实现以通过编译。浏览器实际播放由 [WebPlayer] 完成。
+  Future<void> setProperty(
+    String property,
+    String value, {
+    bool waitForInitialization = true,
+  }) async {}
+
+  Future<String> getProperty(
+    String property, {
+    bool waitForInitialization = true,
+  }) async =>
+      '';
+
+  void setMediaHeader({
+    String? userAgent,
+    String? referer,
+    Map<String, String>? headers,
+  }) {}
 }
