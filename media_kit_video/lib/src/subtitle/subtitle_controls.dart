@@ -4,7 +4,6 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import 'package:media_kit_video/media_kit_video_controls/src/controls/methods/video_state.dart';
-import 'package:media_kit_video/media_kit_video_controls/src/controls/widgets/video_state_inherited_widget.dart';
 
 Widget _buildIcon({
   required double? iconSize,
@@ -339,6 +338,7 @@ class _SubtitleSettingsBody extends StatelessWidget {
     required this.strokeColor,
     required this.strokeWidth,
     required this.shadow,
+    required this.fontWeight,
     required this.onFontSizeChanged,
     required this.onFontColorChanged,
     required this.onBgColorChanged,
