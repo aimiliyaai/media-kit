@@ -172,7 +172,7 @@ class SubtitleViewConfiguration {
     height: height,
     letterSpacing: 0.0,
     wordSpacing: 0.0,
-    shadows: shadow ? const [Shadow(color: Colors.black, offset: Offset(1, 2), blurRadius: 3)] : null,
+    shadows: shadow ? const [Shadow(color: Colors.black, offset: Offset(0, 0), blurRadius: 8)] : null,
   );
 
   TextStyle? get resolveStrokeStyle {

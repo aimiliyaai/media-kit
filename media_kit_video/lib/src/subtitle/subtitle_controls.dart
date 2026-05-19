@@ -176,6 +176,7 @@ Future<void> showSubtitleSettingsPanel(BuildContext context) {
     required FontWeight fontWeight,
   }) {
     final config = SubtitleViewConfiguration(
+      visible: currentConfig.visible,
       fontSize: fontSize,
       fontColor: fontColor,
       backgroundColor: backgroundColor,
@@ -183,6 +184,9 @@ Future<void> showSubtitleSettingsPanel(BuildContext context) {
       strokeWidth: strokeWidth,
       shadow: shadow,
       fontWeight: fontWeight,
+      height: currentConfig.height,
+      textAlign: currentConfig.textAlign,
+      textScaler: currentConfig.textScaler,
       textScaleFactor: currentConfig.textScaleFactor,
       padding: currentConfig.padding,
     );
@@ -574,10 +578,12 @@ class _SubtitleSettingsPageState extends State<SubtitleSettingsPage> {
   late double strokeWidth;
   late bool shadow;
   late int fontWeight;
+  late SubtitleViewConfiguration _initialConfig;
 
   @override
   void initState() {
     super.initState();
+    _initialConfig = widget.initial;
     final c = widget.initial;
     fontSize = c.fontSize;
     fontColor = c.fontColor;
@@ -589,6 +595,7 @@ class _SubtitleSettingsPageState extends State<SubtitleSettingsPage> {
   }
 
   SubtitleViewConfiguration get current => SubtitleViewConfiguration(
+    visible: _initialConfig.visible,
     fontSize: fontSize,
     fontColor: fontColor,
     backgroundColor: bgColor,
@@ -596,6 +603,11 @@ class _SubtitleSettingsPageState extends State<SubtitleSettingsPage> {
     strokeWidth: strokeWidth,
     shadow: shadow,
     fontWeight: FontWeight.values[fontWeight],
+    height: _initialConfig.height,
+    textAlign: _initialConfig.textAlign,
+    textScaler: _initialConfig.textScaler,
+    textScaleFactor: _initialConfig.textScaleFactor,
+    padding: _initialConfig.padding,
   );
 
   @override
