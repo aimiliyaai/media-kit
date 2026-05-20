@@ -88,21 +88,6 @@ class SubtitleViewState extends State<SubtitleView> {
           textScaler: textScaler,
         );
 
-        final stroke = widget.configuration.resolveStrokeStyle;
-        if (stroke != null) {
-          textWidget = Stack(
-            children: [
-              Text(
-                text,
-                style: stroke,
-                textAlign: widget.configuration.textAlign,
-                textScaler: textScaler,
-              ),
-              textWidget,
-            ],
-          );
-        }
-
         final bg = widget.configuration.backgroundColor;
         if (bg != null) {
           textWidget = Container(
@@ -165,26 +150,28 @@ class SubtitleViewConfiguration {
     ),
   });
 
-  TextStyle get resolveStyle => TextStyle(
-    fontSize: fontSize,
-    color: fontColor,
-    fontWeight: fontWeight,
-    height: height,
-    letterSpacing: 0.0,
-    wordSpacing: 0.0,
-    shadows: shadow ? const [Shadow(color: Colors.black, offset: Offset(0, 0), blurRadius: 8)] : null,
-  );
-
-  TextStyle? get resolveStrokeStyle {
-    if (strokeColor == null || strokeWidth <= 0) return null;
+  TextStyle get resolveStyle {
+    final list = <Shadow>[];
+    if (strokeColor != null && strokeWidth > 0) {
+      final sw = strokeWidth;
+      list.addAll([
+        Shadow(color: strokeColor!, offset: Offset(-sw, 0), blurRadius: 0.5),
+        Shadow(color: strokeColor!, offset: Offset(sw, 0), blurRadius: 0.5),
+        Shadow(color: strokeColor!, offset: Offset(0, -sw), blurRadius: 0.5),
+        Shadow(color: strokeColor!, offset: Offset(0, sw), blurRadius: 0.5),
+      ]);
+    }
+    if (shadow) {
+      list.add(const Shadow(color: Colors.black, offset: Offset(2, 4), blurRadius: 3));
+    }
     return TextStyle(
       fontSize: fontSize,
+      color: fontColor,
       fontWeight: fontWeight,
       height: height,
-      foreground: Paint()
-        ..color = strokeColor!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth,
+      letterSpacing: 0.0,
+      wordSpacing: 0.0,
+      shadows: list.isNotEmpty ? list : null,
     );
   }
 
